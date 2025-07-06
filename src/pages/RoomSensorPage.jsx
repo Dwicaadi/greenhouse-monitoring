@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import SensorChart from '../components/SensorChart';
 import axios from '../api/axios';
-import { ROOM_ENDPOINTS, SENSOR_ENDPOINTS, FAN_ENDPOINTS, SETTINGS_ENDPOINTS } from '../api/endpoints';
+import { ROOM_ENDPOINTS, SENSOR_ENDPOINTS, FAN_ENDPOINTS } from '../api/endpoints';
 import { WiThermometer, WiHumidity } from 'react-icons/wi';
 import { IoWaterOutline } from 'react-icons/io5';
 import { FaTemperatureLow, FaWater } from 'react-icons/fa';
@@ -28,13 +27,13 @@ const RoomSensorPage = () => {
     humyData: []
   });
 
-  // State untuk pengaturan ideal
-  const [settings, setSettings] = useState({
+  // State untuk pengaturan ideal (nilai tetap)
+  const settings = {
     ideal_temp_min: 21.0,
     ideal_temp_max: 27.0,
     ideal_humy_min: 60,
     ideal_humy_max: 70
-  });
+  };
 
   // Fungsi untuk mengupdate data chart
   const updateChartData = useCallback((temp, humy) => {
@@ -124,46 +123,45 @@ const RoomSensorPage = () => {
     }
   }, []);
 
-  // Fungsi untuk mengambil pengaturan ideal
-  const fetchSettings = useCallback(async () => {
+  // Fungsi untuk mengontrol status fan dan lamp
+  const toggleFan = async (device) => {
     try {
-      const response = await axios.get(SETTINGS_ENDPOINTS.GET(1));
-      
-      if (response.data.status === 'success' && response.data.data) {
-        const data = response.data.data;
-        
-        setSettings({
-          ideal_temp_min: parseFloat(data.ideal_temp_min) || 21.0,
-          ideal_temp_max: parseFloat(data.ideal_temp_max) || 27.0,
-          ideal_humy_min: parseInt(data.ideal_humy_min) || 60,
-          ideal_humy_max: parseInt(data.ideal_humy_max) || 70
-        });
-      }
-    } catch (error) {
-      console.error(`Error fetching settings:`, error);
-    }
-  }, []);
-
-  // Fungsi untuk mengontrol status fan
-  const toggleFan = async (fanNumber) => {
-    try {
-      const newFanStatus = !sensorData[fanNumber];
-      const payload = {
-        room_id: 1,
-        fan1: fanNumber === 'fan1' ? (newFanStatus ? 1 : 0) : (sensorData.fan1 ? 1 : 0),
-        lamp1: fanNumber === 'lamp1' ? (newFanStatus ? 1 : 0) : (sensorData.lamp1 ? 1 : 0)
-      };
-      await axios.put(FAN_ENDPOINTS.CONTROL, payload);
-      // Setelah update, langsung fetch status dari backend
-      await fetchFanStatus();
-    } catch (error) {
-      console.error(`Error toggling ${fanNumber}:`, error);
-      
-      // Kembalikan state jika gagal
+      // Optimistic update - update UI dulu untuk responsivitas
       setSensorData(prev => ({
         ...prev,
-        [fanNumber]: !prev[fanNumber]
+        [device]: !prev[device]
       }));
+
+      // Kirim request toggle ke backend
+      const response = await axios.post(FAN_ENDPOINTS.TOGGLE(1), {
+        device: device // 'fan1' atau 'lamp1'
+      });
+
+      if (response.data.status === 'success') {
+        // Update state dengan data dari backend
+        setSensorData(prev => ({
+          ...prev,
+          fan1: response.data.data.fan1 === 1,
+          lamp1: response.data.data.lamp1 === 1
+        }));
+
+        console.log(response.data.message);
+      } else {
+        throw new Error(response.data.message || 'Gagal toggle device');
+      }
+    } catch (error) {
+      console.error(`Error toggling ${device}:`, error);
+      
+      // Kembalikan state jika gagal (rollback optimistic update)
+      setSensorData(prev => ({
+        ...prev,
+        [device]: !prev[device]
+      }));
+
+      // Tampilkan error message jika ada
+      if (error.response?.data?.error) {
+        console.error('Backend error:', error.response.data.error);
+      }
     }
   };
 
@@ -177,7 +175,6 @@ const RoomSensorPage = () => {
         await fetchSensorData();
         await fetchHistoricalData();
         await fetchFanStatus();
-        await fetchSettings();
       } catch (error) {
         console.error('Error fetching initial data:', error);
         setError('Terjadi kesalahan saat mengambil data awal');
@@ -213,7 +210,7 @@ const RoomSensorPage = () => {
       clearInterval(sensorInterval);
       clearInterval(fanInterval);
     };
-  }, [fetchSensorData, fetchHistoricalData, fetchFanStatus, fetchSettings]);
+  }, [fetchSensorData, fetchHistoricalData, fetchFanStatus, error]);
 
   // Menentukan status suhu berdasarkan pengaturan ideal
   const isTempTooHigh = sensorData.temp > settings.ideal_temp_max;

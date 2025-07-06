@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from '../api/axios';
-import { SENSOR_ENDPOINTS, FAN_ENDPOINTS, SETTINGS_ENDPOINTS } from '../api/endpoints';
 
 /**
  * Custom hook untuk mengambil dan mengelola data sensor
@@ -61,7 +60,7 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
   const fetchSensorData = useCallback(async () => {
     try {
       // Menggunakan endpoint baru untuk mendapatkan data sensor terbaru
-      const response = await axios.get(SENSOR_ENDPOINTS.LATEST(1));
+      const response = await axios.get(`/api/sensor?action=sensor&room_id=${roomId}`);
       
       if (response.data.status === 'success' && response.data.data) {
         const data = response.data.data;
@@ -86,13 +85,13 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
         setError(`Gagal mengambil data sensor: ${error.message}`);
       }
     }
-  }, [updateChartData, error]);
+  }, [updateChartData, error, roomId]);
 
   // Fungsi untuk mengambil status fan dari API
   const fetchFanStatus = useCallback(async () => {
     try {
       // Menggunakan endpoint baru untuk mendapatkan status fan terbaru
-      const response = await axios.get(FAN_ENDPOINTS.STATUS(1));
+      const response = await axios.get(`/api/sensor?action=fan&room_id=${roomId}`);
       
       if (response.data.status === 'success' && response.data.data) {
         const data = response.data.data;
@@ -106,34 +105,29 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
     } catch (error) {
       // Hanya log error jika bukan 401
       if (!error.response || error.response.status !== 401) {
-        console.error(`Error fetching room ${1} fan status:`, error);
+        console.error(`Error fetching room ${roomId} fan status:`, error);
       }
     }
-  }, []);
+  }, [roomId]);
 
   // Fungsi untuk mengambil pengaturan ideal dari API
   const fetchSettings = useCallback(async () => {
     try {
       // Menggunakan endpoint baru untuk mendapatkan pengaturan room
-      const response = await axios.get(SETTINGS_ENDPOINTS.GET(1));
-      
-      if (response.data.status === 'success' && response.data.data) {
-        const data = response.data.data;
-        
-        setSettings({
-          ideal_temp_min: parseFloat(data.ideal_temp_min) || 21.0,
-          ideal_temp_max: parseFloat(data.ideal_temp_max) || 27.0,
-          ideal_humy_min: parseInt(data.ideal_humy_min) || 60,
-          ideal_humy_max: parseInt(data.ideal_humy_max) || 70
-        });
-      }
+      // Sementara gunakan nilai default karena backend belum punya endpoint settings
+      setSettings({
+        ideal_temp_min: 21.0,
+        ideal_temp_max: 27.0,
+        ideal_humy_min: 60,
+        ideal_humy_max: 70
+      });
     } catch (error) {
       // Hanya log error jika bukan 401
       if (!error.response || error.response.status !== 401) {
-        console.error(`Error fetching room ${1} settings:`, error);
+        console.error(`Error fetching room ${roomId} settings:`, error);
       }
     }
-  }, []);
+  }, [roomId]);
 
   // Fungsi untuk mengontrol status fan
   const toggleFan = useCallback(async (fanNumber) => {
@@ -148,12 +142,14 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
 
       // Kirim ke API menggunakan axios dengan metode PUT (sesuai RESTful API)
       const payload = {
-        room_id: 1,
+        room_id: roomId,
         fan1: fanNumber === 'fan1' ? (newFanStatus ? 1 : 0) : (sensorData.fan1 ? 1 : 0),
         fan2: fanNumber === 'fan2' ? (newFanStatus ? 1 : 0) : (sensorData.fan2 ? 1 : 0)
       };
 
-      await axios.put(FAN_ENDPOINTS.CONTROL, payload);
+      // Sementara disable karena backend belum punya endpoint untuk update fan
+      // await axios.put(`/api/sensor?action=control&room_id=${roomId}`, payload);
+      console.log('Fan control payload:', payload);
     } catch (error) {
       console.error(`Error toggling ${fanNumber}:`, error);
       
@@ -163,7 +159,7 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
         [fanNumber]: !prev[fanNumber]
       }));
     }
-  }, [sensorData]);
+  }, [sensorData, roomId]);
 
   // Effect untuk polling data sensor
   useEffect(() => {
@@ -184,7 +180,7 @@ const useSensorData = (roomId, pollingInterval = 5000) => {
       clearInterval(sensorInterval);
       clearInterval(fanInterval);
     };
-  }, [pollingInterval, fetchSensorData, fetchFanStatus, fetchSettings, 1]);
+  }, [pollingInterval, fetchSensorData, fetchFanStatus, fetchSettings]);
 
   return {
     sensorData,

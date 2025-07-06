@@ -15,7 +15,7 @@ const ProfilePage = () => {
     password: ''
   });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('http://localhost/TA/backend/assets/images/default-avatar.png');
+  const [previewUrl, setPreviewUrl] = useState('https://api-iot.wibudev.moe/uploads/profile_pictures/default-avatar.png');
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -40,12 +40,11 @@ const ProfilePage = () => {
         
         // Periksa apakah ada profile_photo
         if (userData.profile_photo) {
-          // Jika path dimulai dengan '/', tambahkan base URL
-          if (userData.profile_photo.startsWith('/')) {
-            setPreviewUrl(`http://localhost/TA/backend${userData.profile_photo}`);
-          } else {
-            setPreviewUrl(userData.profile_photo);
-          }
+          // Buat URL lengkap untuk foto profil
+          const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${userData.profile_photo}`;
+          setPreviewUrl(photoUrl);
+        } else {
+          setPreviewUrl('https://api-iot.wibudev.moe/uploads/profile_pictures/default-avatar.png');
         }
         
         setIsLoading(false);
@@ -84,19 +83,26 @@ const ProfilePage = () => {
     setErrorMessage('');
     setSuccessMessage('');
 
+    // Debug: tampilkan user data
+    const userData = localStorage.getItem('user');
+    console.log('User data from localStorage:', userData);
+
     try {
       // Update profil
-      await authService.updateProfile({
+      const profileResponse = await authService.updateProfile({
         username: profileData.username,
         email: profileData.email,
         name: profileData.name
       });
+      
+      console.log('Profile update response:', profileResponse);
 
       // Update password jika diisi
-      if (profileData.password) {
-        await authService.updatePassword({
-          password: profileData.password
+      if (profileData.password && profileData.password.trim() !== '') {
+        const passwordResponse = await authService.updatePassword({
+          new_password: profileData.password
         });
+        console.log('Password update response:', passwordResponse);
       }
 
       // Update foto profil jika ada
@@ -105,14 +111,25 @@ const ProfilePage = () => {
         formData.append('photo', selectedFile);
         const response = await authService.updateProfilePhoto(formData);
         
+        console.log('Profile photo update response:', response);
+        
         // Jika berhasil update foto, perbarui data user di localStorage
-        if (response && response.status === 'success' && response.profile_photo) {
+        if (response && response.status === 'success') {
           const userData = JSON.parse(localStorage.getItem('user') || '{}');
           userData.profile_photo = response.profile_photo;
           localStorage.setItem('user', JSON.stringify(userData));
           
+          // Update preview URL langsung dengan URL dari response
+          const newPhotoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${response.profile_photo}?t=${Date.now()}`;
+          setPreviewUrl(newPhotoUrl);
+          
           // Kirim event untuk memberitahu komponen lain bahwa profil telah diperbarui
           window.dispatchEvent(new Event('profileUpdated'));
+          
+          // Refresh data profil dari server untuk memastikan sinkronisasi
+          setTimeout(() => {
+            window.dispatchEvent(new Event('profileUpdated'));
+          }, 500);
         }
       }
 
@@ -124,7 +141,15 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error('Error updating profile:', error);
-      setErrorMessage(error.message || 'Gagal memperbarui profil');
+      
+      // Tangani error dengan lebih spesifik
+      if (error.response) {
+        setErrorMessage(error.response.data?.message || 'Gagal memperbarui profil');
+      } else if (error.message) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Gagal memperbarui profil. Periksa koneksi internet Anda.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -145,7 +170,7 @@ const ProfilePage = () => {
       
       if (response && response.status === 'success') {
         // Update preview ke default avatar
-        setPreviewUrl('http://localhost/TA/backend/assets/images/default-avatar.png');
+        setPreviewUrl('https://api-iot.wibudev.moe/uploads/profile_pictures/default-avatar.png');
         setSelectedFile(null);
         
         // Update data user di localStorage

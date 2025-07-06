@@ -16,17 +16,17 @@ const PrivateRoute = ({ children }) => {
     
     const checkAuth = async () => {
       try {
-        // Pastikan withCredentials diaktifkan untuk mengirim cookie
+        // Enable withCredentials untuk session support
         axios.defaults.withCredentials = true;
         
-        // Cek autentikasi dengan server
-        const response = await axios.get('/src/auth/check_auth.php');
+        // Cek autentikasi dengan server menggunakan endpoint yang benar
+        const response = await axios.get('/auth/profile');
         
         if (isMounted) {
-          if (response.data && response.data.authenticated) {
+          if (response.data && response.data.status === 'success') {
             // Update user data jika ada perubahan dari server
-            if (response.data.user) {
-              localStorage.setItem('user', JSON.stringify(response.data.user));
+            if (response.data.data) {
+              localStorage.setItem('user', JSON.stringify(response.data.data));
             }
             
             setAuthState({
@@ -63,7 +63,7 @@ const PrivateRoute = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, [location.pathname, authState.lastChecked]);
+  }, [location.pathname, authState.lastChecked, authState.isLoading]);
   
   // Tampilkan loading jika masih memeriksa autentikasi
   if (authState.isLoading) {

@@ -12,12 +12,8 @@ const getBaseURL = () => {
         return import.meta.env.VITE_API_BASE_URL;
     }
     
-    // Jika development, gunakan proxy
-    if (isDevelopment) {
-        return '/api';
-    }
-    
-    // Fallback untuk production
+    // Untuk development, gunakan server production juga
+    // Karena backend sudah di-deploy di https://api-iot.wibudev.moe
     return 'https://api-iot.wibudev.moe';
 };
 
@@ -29,8 +25,8 @@ const instance = axios.create({
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     },
-    withCredentials: true, // Untuk session/cookies
-    timeout: 10000 // 10 detik timeout
+    withCredentials: true, // Enable untuk session/cookies dengan CORS
+    timeout: 15000 // 15 detik timeout (diperpanjang)
 });
 
 // Tambahkan log untuk debugging
@@ -38,13 +34,14 @@ console.log('🔧 Axios Configuration:', {
     baseURL: baseURL,
     isDevelopment: isDevelopment,
     environment: import.meta.env.VITE_ENVIRONMENT || 'production',
-    mode: import.meta.env.MODE
+    mode: import.meta.env.MODE,
+    withCredentials: true
 });
 
 // Add a request interceptor
 instance.interceptors.request.use(
     (config) => {
-        // Pastikan withCredentials selalu aktif
+        // Enable withCredentials untuk session support
         config.withCredentials = true;
         return config;
     },
@@ -62,9 +59,19 @@ instance.interceptors.response.use(
         return response;
     },
     async (error) => {
-        // Jika tidak ada response, mungkin masalah network
+        // Jika tidak ada response, mungkin masalah network atau CORS
         if (!error.response) {
             console.error('🔥 Network Error:', error.message);
+            
+            // Cek apakah ini masalah CORS
+            if (error.message.includes('CORS') || error.message.includes('Network Error')) {
+                console.error('🚫 CORS Error detected:', {
+                    message: error.message,
+                    config: error.config,
+                    baseURL: baseURL
+                });
+            }
+            
             return Promise.reject(error);
         }
 

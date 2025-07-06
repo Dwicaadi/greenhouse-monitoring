@@ -25,41 +25,42 @@ export default defineConfig({
     historyApiFallback: true,
     // Add CORS headers
     cors: true,
-    proxy: {
-      // Proxy API requests to backend during development
-      '/api': {
-        target: 'http://localhost/TA/backend',
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
-            console.log('🔥 Proxy Error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('🚀 Proxy Request:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('✅ Proxy Response:', proxyRes.statusCode, req.url);
-          });
-        },
-      },
-      // Proxy auth requests to backend
-      '/src/auth': {
-        target: 'http://localhost/TA/backend',
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, options) => {
-          proxy.on('error', (err, req, res) => {
-            console.log('🔥 Auth Proxy Error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('🚀 Auth Proxy Request:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('✅ Auth Proxy Response:', proxyRes.statusCode, req.url);
-          });
-        },
-      }
-    }
+    // Disable proxy - langsung gunakan production server
+    // proxy: {
+    //   // Proxy API requests to backend during development
+    //   '/api': {
+    //     target: 'http://localhost/TA/backend',
+    //     changeOrigin: true,
+    //     secure: false,
+    //     configure: (proxy, options) => {
+    //       proxy.on('error', (err, req, res) => {
+    //         console.log('🔥 Proxy Error:', err);
+    //       });
+    //       proxy.on('proxyReq', (proxyReq, req, res) => {
+    //         console.log('🚀 Proxy Request:', req.method, req.url);
+    //       });
+    //       proxy.on('proxyRes', (proxyRes, req, res) => {
+    //         console.log('✅ Proxy Response:', proxyRes.statusCode, req.url);
+    //       });
+    //     },
+    //   },
+    //   // Proxy auth requests to backend
+    //   '/src/auth': {
+    //     target: 'http://localhost/TA/backend',
+    //     changeOrigin: true,
+    //     secure: false,
+    //     configure: (proxy, options) => {
+    //       proxy.on('error', (err, req, res) => {
+    //         console.log('🔥 Auth Proxy Error:', err);
+    //       });
+    //       proxy.on('proxyReq', (proxyReq, req, res) => {
+    //         console.log('🚀 Auth Proxy Request:', req.method, req.url);
+    //       });
+    //       proxy.on('proxyRes', (proxyRes, req, res) => {
+    //         console.log('✅ Auth Proxy Response:', proxyRes.statusCode, req.url);
+    //       });
+    //     },
+    //   }
+    // }
   }
 })

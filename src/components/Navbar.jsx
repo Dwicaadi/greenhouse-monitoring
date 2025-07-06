@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MoonIcon, SunIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { getUserData } from '../utils/profileUtils';
+import { getProfilePhotoUrlWithCacheBust } from '../utils/urlUtils';
 import logoImage from '../assets/images/logo.png';
 import axios from '../api/axios';
 import { AUTH_ENDPOINTS } from '../api/endpoints';
@@ -17,24 +18,28 @@ const Navbar = ({ onToggleSidebar }) => {
   // Fungsi untuk mengambil data profil dari API
   const fetchProfileData = async () => {
     try {
+      console.log('Navbar: Fetching profile data...');
       const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
       
       if (response.data && response.data.status === 'success') {
         const profileData = response.data.user || response.data.data || response.data;
+        console.log('Navbar: Profile data received:', profileData);
         setUserData(profileData);
         
         // Periksa apakah ada profile_photo
         if (profileData.profile_photo) {
-          // Jika path dimulai dengan '/', tambahkan base URL
-          if (profileData.profile_photo.startsWith('/')) {
-            setProfilePicture(`http://localhost/TA/backend${profileData.profile_photo}`);
-          } else {
-            setProfilePicture(profileData.profile_photo);
-          }
+          // Gunakan utilitas URL dengan cache busting
+          const photoUrl = getProfilePhotoUrlWithCacheBust(profileData.profile_photo);
+          console.log('Navbar: Setting profile picture URL:', photoUrl);
+          setProfilePicture(photoUrl);
+        } else {
+          // Reset ke null jika tidak ada foto
+          console.log('Navbar: No profile photo found, resetting to null');
+          setProfilePicture(null);
         }
       }
     } catch (error) {
-      console.error('Error fetching profile data:', error);
+      console.error('Navbar: Error fetching profile data:', error);
       // Fallback ke data dari localStorage jika API gagal
       const localUserData = getUserData();
       setUserData(localUserData);
@@ -155,11 +160,21 @@ const Navbar = ({ onToggleSidebar }) => {
               className="flex items-center space-x-2 focus:outline-none"
             >
               <div className="h-8 w-8 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center overflow-hidden">
-                <img
-                  src={profilePicture}
-                  alt={userData.username || 'Profile'}
-                  className="h-full w-full object-cover"
-                />
+                {profilePicture ? (
+                  <img
+                    src={profilePicture}
+                    alt={userData.username || 'Profile'}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      console.log('Navbar: Image failed to load:', e.target.src);
+                      setProfilePicture(null);
+                    }}
+                  />
+                ) : (
+                  <span className="text-purple-600 dark:text-purple-300 font-medium text-sm">
+                    {(userData.name || userData.username || 'A').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="text-left">
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{userData.username || 'Administrator'}</span>

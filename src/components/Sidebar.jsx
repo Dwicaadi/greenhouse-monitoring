@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { UserCircleIcon, ArrowRightOnRectangleIcon, BeakerIcon, ChartBarIcon, HomeModernIcon, Cog6ToothIcon, XMarkIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect } from 'react';
 import { getUserData } from '../utils/profileUtils';
+import { getProfilePhotoUrlWithCacheBust } from '../utils/urlUtils';
 import logoImage from '../assets/images/logo.png';
 import axios from '../api/axios';
 import { AUTH_ENDPOINTS, ROOM_ENDPOINTS } from '../api/endpoints';
@@ -20,24 +21,28 @@ const Sidebar = ({ onCloseSidebar }) => {
   // Fungsi untuk mengambil data profil dari API
   const fetchProfileData = async () => {
     try {
+      console.log('Sidebar: Fetching profile data...');
       const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
       
       if (response.data && response.data.status === 'success') {
         const profileData = response.data.user || response.data.data || response.data;
+        console.log('Sidebar: Profile data received:', profileData);
         setUserData(profileData);
         
         // Periksa apakah ada profile_photo
         if (profileData.profile_photo) {
-          // Jika path dimulai dengan '/', tambahkan base URL
-          if (profileData.profile_photo.startsWith('/')) {
-            setProfilePicture(`http://localhost/TA/backend${profileData.profile_photo}`);
-          } else {
-            setProfilePicture(profileData.profile_photo);
-          }
+          // Gunakan utilitas URL dengan cache busting
+          const photoUrl = getProfilePhotoUrlWithCacheBust(profileData.profile_photo);
+          console.log('Sidebar: Setting profile picture URL:', photoUrl);
+          setProfilePicture(photoUrl);
+        } else {
+          // Reset ke null jika tidak ada foto
+          console.log('Sidebar: No profile photo found, resetting to null');
+          setProfilePicture(null);
         }
       }
     } catch (error) {
-      console.error('Error fetching profile data:', error);
+      console.error('Sidebar: Error fetching profile data:', error);
       // Fallback ke data dari localStorage jika API gagal
       const localUserData = getUserData();
       setUserData(localUserData);
@@ -156,8 +161,22 @@ const Sidebar = ({ onCloseSidebar }) => {
       
       <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg mx-3 mb-3 flex items-center">
         <Link to="/pengaturan" className="flex items-center flex-grow cursor-pointer">
-          <img src={profilePicture} alt={userData.username} className="w-8 h-8 rounded-full mr-2" />
-          <div>
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+            {profilePicture ? (
+              <img 
+                src={profilePicture} 
+                alt={userData.username} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.log('Sidebar: Image failed to load:', e.target.src);
+                  setProfilePicture(null);
+                }}
+              />
+            ) : (
+              <UserCircleIcon className="w-6 h-6 text-gray-400" />
+            )}
+          </div>
+          <div className="ml-2">
             <p className="text-xs font-medium dark:text-white">{userData.name || userData.username || 'User'}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{userData.email}</p>
           </div>

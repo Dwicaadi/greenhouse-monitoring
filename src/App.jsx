@@ -4,7 +4,6 @@ import Register from './pages/RegisterPage';
 import RoomSensorPage from './pages/RoomSensorPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
-import ApiTest from './components/ApiTest';
 import PrivateRoute from './components/PrivateRoute';
 import './App.css'
 
@@ -15,7 +14,6 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/api-test" element={<ApiTest />} />
         
         {/* Protected Routes */}
         {/* Home Page / Dashboard */}

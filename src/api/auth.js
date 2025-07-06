@@ -6,10 +6,15 @@ export const authService = {
     checkAuth: async () => {
         try {
             console.log('Checking auth status with server');
-            const response = await axios.get('/src/auth/check_auth.php');
+            const response = await axios.get('/auth/profile');
             console.log('Auth check response:', response.data);
             
-            return response.data && response.data.authenticated;
+            if (response.data && response.data.status === 'success') {
+                // Update user data di localStorage
+                localStorage.setItem('user', JSON.stringify(response.data.data));
+                return true;
+            }
+            return false;
         } catch (error) {
             console.error('Error checking auth status:', error);
             // Jika server error, cek lokal
@@ -19,7 +24,7 @@ export const authService = {
     
     login: async (credentials) => {
         try {
-            // Pastikan withCredentials diaktifkan untuk mengirim cookie
+            // Enable withCredentials untuk session support
             axios.defaults.withCredentials = true;
             
             const response = await axios.post(AUTH_ENDPOINTS.LOGIN, credentials);
@@ -116,8 +121,16 @@ export const authService = {
 
     getProfile: async () => {
         try {
-            // Coba ambil data dari endpoint profile
-            const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
+            // Ambil user ID dari localStorage untuk digunakan sebagai parameter
+            const userData = localStorage.getItem('user');
+            let userId = '';
+            if (userData) {
+                const parsedData = JSON.parse(userData);
+                userId = parsedData.id || '';
+            }
+            
+            // Coba ambil data dari endpoint profile dengan user_id sebagai parameter
+            const response = await axios.get(`${AUTH_ENDPOINTS.PROFILE}?user_id=${userId}`);
             console.log('Profile response from API:', response.data);
             
             // Kembalikan data apapun yang diterima dari API
@@ -145,11 +158,18 @@ export const authService = {
     
     updateProfile: async (profileData) => {
         try {
-            // Coba update profil di backend
-            const response = await axios.put(AUTH_ENDPOINTS.UPDATE_PROFILE, profileData);
+            // Ambil user ID dari localStorage
+            const userData = localStorage.getItem('user');
+            let userId = '';
+            if (userData) {
+                const parsedData = JSON.parse(userData);
+                userId = parsedData.id || '';
+            }
+            
+            // Coba update profil di backend dengan user_id sebagai parameter
+            const response = await axios.put(`${AUTH_ENDPOINTS.UPDATE_PROFILE}?user_id=${userId}`, profileData);
             
             // Jika berhasil, update juga data di localStorage
-            const userData = localStorage.getItem('user');
             if (userData) {
                 const parsedData = JSON.parse(userData);
                 const updatedData = { ...parsedData, ...profileData };
@@ -175,7 +195,15 @@ export const authService = {
     
     updatePassword: async (passwordData) => {
         try {
-            const response = await axios.put(AUTH_ENDPOINTS.UPDATE_PASSWORD, passwordData);
+            // Ambil user ID dari localStorage
+            const userData = localStorage.getItem('user');
+            let userId = '';
+            if (userData) {
+                const parsedData = JSON.parse(userData);
+                userId = parsedData.id || '';
+            }
+            
+            const response = await axios.patch(`${AUTH_ENDPOINTS.UPDATE_PASSWORD}?user_id=${userId}`, passwordData);
             return response.data;
         } catch (error) {
             console.error('Error updating password:', error);
@@ -185,18 +213,33 @@ export const authService = {
     
     updateProfilePhoto: async (formData) => {
         try {
+            // Ambil user ID dari localStorage
+            const userData = localStorage.getItem('user');
+            let userId = '';
+            if (userData) {
+                const parsedData = JSON.parse(userData);
+                userId = parsedData.id || '';
+            }
+            
+            // Tambahkan user_id ke FormData
+            formData.append('user_id', userId);
+            
             // Coba upload foto profil ke backend
             const response = await axios.post(AUTH_ENDPOINTS.UPDATE_PHOTO, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
+            
+            console.log('Profile photo update response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Error updating profile photo:', error);
-            // Untuk sementara, kembalikan pesan sukses meskipun endpoint belum tersedia
-            // Ini agar user tetap bisa menggunakan fitur lain
-            return { status: 'success', message: 'Foto profil berhasil diperbarui (lokal)' };
+            if (error.response) {
+                throw error.response.data;
+            } else {
+                throw { message: 'Gagal mengupload foto profil' };
+            }
         }
     },
     

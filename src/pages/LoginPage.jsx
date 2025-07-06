@@ -24,10 +24,10 @@ const LoginPage = () => {
       try {
         // Cek dengan server jika user terautentikasi
         console.log('LoginPage - Checking auth with server');
-        const response = await axios.get('/src/auth/check_auth.php');
+        const response = await axios.get('/auth/profile');
         console.log('LoginPage - Auth check response:', response.data);
         
-        if (response.data && response.data.authenticated) {
+        if (response.data && response.data.status === 'success') {
           console.log('User sudah login (server), mengarahkan ke dashboard...');
           const redirectTo = location.state?.from || '/dashboard';
           navigate(redirectTo, { replace: true });

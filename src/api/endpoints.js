@@ -1,12 +1,12 @@
 export const AUTH_ENDPOINTS = {
-    LOGIN: '/src/auth/login.php',
-    REGISTER: '/src/auth/register.php',
-    LOGOUT: '/src/auth/logout.php',
-    PROFILE: '/src/auth/profile.php',
-    UPDATE_PROFILE: '/src/auth/update_profile.php',
-    UPDATE_PASSWORD: '/src/auth/update_password.php',
-    UPDATE_PHOTO: '/src/auth/profile_photo.php',
-    DELETE_PHOTO: '/src/auth/delete_profile_photo.php',
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    LOGOUT: '/auth/logout',
+    PROFILE: '/auth/profile',
+    UPDATE_PROFILE: '/auth/profile',
+    UPDATE_PASSWORD: '/auth/profile',
+    UPDATE_PHOTO: '/auth/profile-photo',
+    DELETE_PHOTO: '/auth/profile-photo',
 };
 
 export const USER_ENDPOINTS = {
@@ -46,13 +46,6 @@ export const SENSOR_ENDPOINTS = {
 export const FAN_ENDPOINTS = {
     // Status fan berdasarkan room_id
     STATUS: (roomId = 1) => `/src/api/sensor.php?action=fan&room_id=${roomId}`,
-    // (Jika ada endpoint kontrol fan, tambahkan di sini)
-};
-
-// Endpoint untuk pengaturan room
-export const SETTINGS_ENDPOINTS = {
-    // Pengaturan room berdasarkan room_id
-    GET: (roomId) => `/api/settings?room_id=${roomId}`,
-    // Update pengaturan room
-    UPDATE: '/api/settings'
+    // Toggle fan/lamp status
+    TOGGLE: (roomId = 1) => `/src/api/sensor.php?action=toggle&room_id=${roomId}`
 };
