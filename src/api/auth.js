@@ -41,8 +41,28 @@ export const authService = {
                     throw new Error('Data user tidak lengkap dari server');
                 }
                 
-                // Simpan data user di localStorage
-                localStorage.setItem('user', JSON.stringify(response.data.user));
+                // Ambil data user yang sudah ada di localStorage untuk mempertahankan profile_photo
+                const existingUserData = localStorage.getItem('user');
+                let mergedUserData = response.data.user;
+                
+                if (existingUserData) {
+                    try {
+                        const parsedExistingData = JSON.parse(existingUserData);
+                        // Jika user yang sama dan ada profile_photo, pertahankan
+                        if (parsedExistingData.id === response.data.user.id && parsedExistingData.profile_photo) {
+                            mergedUserData = {
+                                ...response.data.user,
+                                profile_photo: parsedExistingData.profile_photo
+                            };
+                            console.log('Preserved existing profile_photo:', parsedExistingData.profile_photo);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing existing user data:', e);
+                    }
+                }
+                
+                // Simpan data user yang sudah di-merge di localStorage
+                localStorage.setItem('user', JSON.stringify(mergedUserData));
                 
                 // Debug: log session ID jika ada
                 if (response.data.session_id) {
