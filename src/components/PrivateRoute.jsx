@@ -20,7 +20,7 @@ const PrivateRoute = ({ children }) => {
         axios.defaults.withCredentials = true;
         
         // Cek autentikasi dengan server menggunakan endpoint yang benar
-        const response = await axios.get('/auth/profile');
+        const response = await axios.get('/auth/profile.php');
         
         if (isMounted) {
           if (response.data && response.data.status === 'success') {
