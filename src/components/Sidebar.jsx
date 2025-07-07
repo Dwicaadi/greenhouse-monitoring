@@ -23,6 +23,7 @@ const Sidebar = ({ onCloseSidebar }) => {
     try {
       // Ambil data dari localStorage dulu
       const localUserData = getUserData();
+      console.log('Sidebar: Local user data:', localUserData);
       setUserData(localUserData);
       
       // Set profile picture dari localStorage jika ada
@@ -31,33 +32,11 @@ const Sidebar = ({ onCloseSidebar }) => {
         console.log('Sidebar: Setting profile picture URL from localStorage:', photoUrl);
         setProfilePicture(photoUrl);
       } else {
+        console.log('Sidebar: No profile_photo in localStorage');
         setProfilePicture(null);
       }
-      
-      // Coba ambil data terbaru dari server (optional)
-      console.log('Sidebar: Fetching profile data from server...');
-      const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
-      
-      if (response.data && response.data.status === 'success') {
-        const profileData = response.data.user || response.data.data || response.data;
-        console.log('Sidebar: Profile data received from server:', profileData);
-        
-        // Update localStorage dengan data terbaru
-        localStorage.setItem('user', JSON.stringify(profileData));
-        setUserData(profileData);
-        
-        // Update profile picture jika ada
-        if (profileData.profile_photo) {
-          const photoUrl = getProfilePhotoUrlWithCacheBust(profileData.profile_photo);
-          console.log('Sidebar: Updating profile picture URL:', photoUrl);
-          setProfilePicture(photoUrl);
-        } else {
-          setProfilePicture(null);
-        }
-      }
     } catch (error) {
-      console.error('Sidebar: Error fetching profile data from server:', error);
-      // Sudah ada fallback ke localStorage di awal fungsi
+      console.error('Sidebar: Error in fetchProfileData:', error);
     }
   };
   
@@ -106,18 +85,36 @@ const Sidebar = ({ onCloseSidebar }) => {
   
   // Efek untuk memperbarui data user dan room
   useEffect(() => {
-    // Panggil fetchProfileData dan fetchRooms saat komponen dimount
+    // Panggil fetchProfileData saat komponen dimount
     fetchProfileData();
     
     // Tambahkan event listener untuk perubahan localStorage
-    window.addEventListener('storage', fetchProfileData);
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' || e.key === null) {
+        console.log('Sidebar: localStorage changed, refreshing profile data');
+        fetchProfileData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
     
     // Custom event untuk refresh profil setelah update
-    window.addEventListener('profileUpdated', fetchProfileData);
+    const handleProfileUpdate = () => {
+      console.log('Sidebar: Profile updated event received');
+      fetchProfileData();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    
+    // Interval untuk refresh data secara berkala (setiap 10 detik)
+    const interval = setInterval(() => {
+      fetchProfileData();
+    }, 10000);
     
     return () => {
-      window.removeEventListener('storage', fetchProfileData);
-      window.removeEventListener('profileUpdated', fetchProfileData);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      clearInterval(interval);
     };
   }, []);
 
