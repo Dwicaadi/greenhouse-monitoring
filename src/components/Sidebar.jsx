@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { UserCircleIcon, ArrowRightOnRectangleIcon, BeakerIcon, ChartBarIcon, HomeModernIcon, Cog6ToothIcon, XMarkIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect } from 'react';
 import { getUserData } from '../utils/profileUtils';
-import { getProfilePhotoUrlWithCacheBust } from '../utils/urlUtils';
 import logoImage from '../assets/images/logo.png';
 import axios from '../api/axios';
 import { AUTH_ENDPOINTS, ROOM_ENDPOINTS } from '../api/endpoints';
@@ -18,18 +17,19 @@ const Sidebar = ({ onCloseSidebar }) => {
   const [userData, setUserData] = useState(getUserData());
   const [profilePicture, setProfilePicture] = useState(null);
   
-  // Fungsi untuk mengambil data profil dari localStorage dan API
-  const fetchProfileData = async () => {
+  // Fungsi untuk mengambil data profil dari localStorage
+  const fetchProfileData = () => {
     try {
-      // Ambil data dari localStorage dulu
+      // Ambil data dari localStorage
       const localUserData = getUserData();
       console.log('Sidebar: Local user data:', localUserData);
       setUserData(localUserData);
       
       // Set profile picture dari localStorage jika ada
-      if (localUserData.profile_photo) {
-        const photoUrl = getProfilePhotoUrlWithCacheBust(localUserData.profile_photo);
-        console.log('Sidebar: Setting profile picture URL from localStorage:', photoUrl);
+      if (localUserData && localUserData.profile_photo) {
+        // Buat URL lengkap untuk foto profil
+        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${localUserData.profile_photo}?t=${Date.now()}`;
+        console.log('Sidebar: Setting profile picture URL:', photoUrl);
         setProfilePicture(photoUrl);
       } else {
         console.log('Sidebar: No profile_photo in localStorage');
@@ -83,7 +83,7 @@ const Sidebar = ({ onCloseSidebar }) => {
     }
   };
   
-  // Efek untuk memperbarui data user dan room
+  // Efek untuk memperbarui data user
   useEffect(() => {
     // Panggil fetchProfileData saat komponen dimount
     fetchProfileData();
@@ -106,15 +106,9 @@ const Sidebar = ({ onCloseSidebar }) => {
     
     window.addEventListener('profileUpdated', handleProfileUpdate);
     
-    // Interval untuk refresh data secara berkala (setiap 10 detik)
-    const interval = setInterval(() => {
-      fetchProfileData();
-    }, 10000);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('profileUpdated', handleProfileUpdate);
-      clearInterval(interval);
     };
   }, []);
 

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MoonIcon, SunIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { getUserData } from '../utils/profileUtils';
-import { getProfilePhotoUrlWithCacheBust } from '../utils/urlUtils';
 import logoImage from '../assets/images/logo.png';
 import axios from '../api/axios';
 import { AUTH_ENDPOINTS } from '../api/endpoints';
@@ -15,34 +14,26 @@ const Navbar = ({ onToggleSidebar }) => {
   const [profilePicture, setProfilePicture] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Fungsi untuk mengambil data profil dari API
-  const fetchProfileData = async () => {
+  // Fungsi untuk mengambil data profil dari localStorage
+  const fetchProfileData = () => {
     try {
-      console.log('Navbar: Fetching profile data...');
-      const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
+      // Ambil data dari localStorage
+      const localUserData = getUserData();
+      console.log('Navbar: Local user data:', localUserData);
+      setUserData(localUserData);
       
-      if (response.data && response.data.status === 'success') {
-        const profileData = response.data.user || response.data.data || response.data;
-        console.log('Navbar: Profile data received:', profileData);
-        setUserData(profileData);
-        
-        // Periksa apakah ada profile_photo
-        if (profileData.profile_photo) {
-          // Gunakan utilitas URL dengan cache busting
-          const photoUrl = getProfilePhotoUrlWithCacheBust(profileData.profile_photo);
-          console.log('Navbar: Setting profile picture URL:', photoUrl);
-          setProfilePicture(photoUrl);
-        } else {
-          // Reset ke null jika tidak ada foto
-          console.log('Navbar: No profile photo found, resetting to null');
-          setProfilePicture(null);
-        }
+      // Set profile picture dari localStorage jika ada
+      if (localUserData && localUserData.profile_photo) {
+        // Buat URL lengkap untuk foto profil
+        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${localUserData.profile_photo}?t=${Date.now()}`;
+        console.log('Navbar: Setting profile picture URL:', photoUrl);
+        setProfilePicture(photoUrl);
+      } else {
+        console.log('Navbar: No profile_photo in localStorage');
+        setProfilePicture(null);
       }
     } catch (error) {
-      console.error('Navbar: Error fetching profile data:', error);
-      // Fallback ke data dari localStorage jika API gagal
-      const localUserData = getUserData();
-      setUserData(localUserData);
+      console.error('Navbar: Error in fetchProfileData:', error);
     }
   };
   
@@ -52,14 +43,26 @@ const Navbar = ({ onToggleSidebar }) => {
     fetchProfileData();
     
     // Tambahkan event listener untuk perubahan localStorage
-    window.addEventListener('storage', fetchProfileData);
+    const handleStorageChange = (e) => {
+      if (e.key === 'user' || e.key === null) {
+        console.log('Navbar: localStorage changed, refreshing profile data');
+        fetchProfileData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
     
     // Custom event untuk refresh profil setelah update
-    window.addEventListener('profileUpdated', fetchProfileData);
+    const handleProfileUpdate = () => {
+      console.log('Navbar: Profile updated event received');
+      fetchProfileData();
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     
     return () => {
-      window.removeEventListener('storage', fetchProfileData);
-      window.removeEventListener('profileUpdated', fetchProfileData);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, []);
 
