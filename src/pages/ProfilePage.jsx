@@ -115,9 +115,15 @@ const ProfilePage = () => {
         
         // Jika berhasil update foto, perbarui data user di localStorage
         if (response && response.status === 'success') {
+          console.log('Profile photo update successful, response:', response);
+          
           const userData = JSON.parse(localStorage.getItem('user') || '{}');
+          console.log('Current user data in localStorage:', userData);
+          
           userData.profile_photo = response.profile_photo;
           localStorage.setItem('user', JSON.stringify(userData));
+          
+          console.log('Updated user data:', userData);
           
           // Update preview URL langsung dengan URL dari response
           const newPhotoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${response.profile_photo}?t=${Date.now()}`;
