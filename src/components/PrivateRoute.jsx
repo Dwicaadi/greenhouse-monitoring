@@ -16,7 +16,21 @@ const PrivateRoute = ({ children }) => {
     
     const checkAuth = async () => {
       try {
-        // Gunakan authService yang sudah ada
+        // Cek localStorage dulu untuk menghindari request berulang
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          // Jika ada data user di localStorage, anggap sudah login
+          if (isMounted) {
+            setAuthState({
+              isAuthenticated: true,
+              isLoading: false,
+              lastChecked: Date.now()
+            });
+          }
+          return;
+        }
+        
+        // Jika tidak ada data lokal, cek ke server
         const isAuthenticated = await authService.checkAuth();
         
         if (isMounted) {
