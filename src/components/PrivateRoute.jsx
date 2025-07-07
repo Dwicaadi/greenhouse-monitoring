@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import axios from '../api/axios';
+import { authService } from '../api/auth';
 
 // Komponen untuk proteksi rute yang membutuhkan autentikasi
 const PrivateRoute = ({ children }) => {
@@ -16,19 +16,11 @@ const PrivateRoute = ({ children }) => {
     
     const checkAuth = async () => {
       try {
-        // Enable withCredentials untuk session support
-        axios.defaults.withCredentials = true;
-        
-         // Cek autentikasi dengan server menggunakan endpoint yang benar
-        const response = await axios.get('/auth/profile');
+        // Gunakan authService yang sudah ada
+        const isAuthenticated = await authService.checkAuth();
         
         if (isMounted) {
-          if (response.data && response.data.status === 'success') {
-            // Update user data jika ada perubahan dari server
-            if (response.data.data) {
-              localStorage.setItem('user', JSON.stringify(response.data.data));
-            }
-            
+          if (isAuthenticated) {
             setAuthState({
               isAuthenticated: true,
               isLoading: false,
