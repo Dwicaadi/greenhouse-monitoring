@@ -18,34 +18,46 @@ const Sidebar = ({ onCloseSidebar }) => {
   const [userData, setUserData] = useState(getUserData());
   const [profilePicture, setProfilePicture] = useState(null);
   
-  // Fungsi untuk mengambil data profil dari API
+  // Fungsi untuk mengambil data profil dari localStorage dan API
   const fetchProfileData = async () => {
     try {
-      console.log('Sidebar: Fetching profile data...');
+      // Ambil data dari localStorage dulu
+      const localUserData = getUserData();
+      setUserData(localUserData);
+      
+      // Set profile picture dari localStorage jika ada
+      if (localUserData.profile_photo) {
+        const photoUrl = getProfilePhotoUrlWithCacheBust(localUserData.profile_photo);
+        console.log('Sidebar: Setting profile picture URL from localStorage:', photoUrl);
+        setProfilePicture(photoUrl);
+      } else {
+        setProfilePicture(null);
+      }
+      
+      // Coba ambil data terbaru dari server (optional)
+      console.log('Sidebar: Fetching profile data from server...');
       const response = await axios.get(AUTH_ENDPOINTS.PROFILE);
       
       if (response.data && response.data.status === 'success') {
         const profileData = response.data.user || response.data.data || response.data;
-        console.log('Sidebar: Profile data received:', profileData);
+        console.log('Sidebar: Profile data received from server:', profileData);
+        
+        // Update localStorage dengan data terbaru
+        localStorage.setItem('user', JSON.stringify(profileData));
         setUserData(profileData);
         
-        // Periksa apakah ada profile_photo
+        // Update profile picture jika ada
         if (profileData.profile_photo) {
-          // Gunakan utilitas URL dengan cache busting
           const photoUrl = getProfilePhotoUrlWithCacheBust(profileData.profile_photo);
-          console.log('Sidebar: Setting profile picture URL:', photoUrl);
+          console.log('Sidebar: Updating profile picture URL:', photoUrl);
           setProfilePicture(photoUrl);
         } else {
-          // Reset ke null jika tidak ada foto
-          console.log('Sidebar: No profile photo found, resetting to null');
           setProfilePicture(null);
         }
       }
     } catch (error) {
-      console.error('Sidebar: Error fetching profile data:', error);
-      // Fallback ke data dari localStorage jika API gagal
-      const localUserData = getUserData();
-      setUserData(localUserData);
+      console.error('Sidebar: Error fetching profile data from server:', error);
+      // Sudah ada fallback ke localStorage di awal fungsi
     }
   };
   
