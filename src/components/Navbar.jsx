@@ -14,26 +14,35 @@ const Navbar = ({ onToggleSidebar }) => {
   const [profilePicture, setProfilePicture] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // Fungsi untuk mengambil data profil dari localStorage
-  const fetchProfileData = () => {
+  // Fungsi untuk mengambil data profil dari backend
+  const fetchProfileData = async () => {
     try {
-      // Ambil data dari localStorage
-      const localUserData = getUserData();
-      console.log('Navbar: Local user data:', localUserData);
-      setUserData(localUserData);
+      // Ambil data dari backend seperti di ProfilePage
+      const response = await authService.getProfile();
+      console.log('Navbar: Profile response from backend:', response);
       
-      // Set profile picture dari localStorage jika ada
-      if (localUserData && localUserData.profile_photo) {
-        // Buat URL lengkap untuk foto profil
-        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${localUserData.profile_photo}?t=${Date.now()}`;
-        console.log('Navbar: Setting profile picture URL:', photoUrl);
+      // Periksa struktur data yang dikembalikan oleh backend
+      const userData = response.data || response;
+      setUserData(userData);
+      
+      // Update localStorage dengan data terbaru
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Set profile picture dari backend
+      if (userData.profile_photo) {
+        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${userData.profile_photo}?t=${Date.now()}`;
+        console.log('Navbar: Setting profile picture URL from backend:', photoUrl);
         setProfilePicture(photoUrl);
       } else {
-        console.log('Navbar: No profile_photo in localStorage');
+        console.log('Navbar: No profile_photo from backend');
         setProfilePicture(null);
       }
     } catch (error) {
-      console.error('Navbar: Error in fetchProfileData:', error);
+      console.error('Navbar: Error fetching profile from backend:', error);
+      // Fallback ke localStorage jika backend error
+      const localUserData = getUserData();
+      setUserData(localUserData);
+      setProfilePicture(null);
     }
   };
   

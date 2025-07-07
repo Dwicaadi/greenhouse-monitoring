@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { UserCircleIcon, ArrowRightOnRectangleIcon, BeakerIcon, ChartBarIcon, HomeModernIcon, Cog6ToothIcon, XMarkIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/solid';
 import { useState, useEffect } from 'react';
 import { getUserData } from '../utils/profileUtils';
+import { authService } from '../api/auth';
 import logoImage from '../assets/images/logo.png';
 import axios from '../api/axios';
 import { AUTH_ENDPOINTS, ROOM_ENDPOINTS } from '../api/endpoints';
@@ -17,26 +18,35 @@ const Sidebar = ({ onCloseSidebar }) => {
   const [userData, setUserData] = useState(getUserData());
   const [profilePicture, setProfilePicture] = useState(null);
   
-  // Fungsi untuk mengambil data profil dari localStorage
-  const fetchProfileData = () => {
+  // Fungsi untuk mengambil data profil dari backend
+  const fetchProfileData = async () => {
     try {
-      // Ambil data dari localStorage
-      const localUserData = getUserData();
-      console.log('Sidebar: Local user data:', localUserData);
-      setUserData(localUserData);
+      // Ambil data dari backend seperti di ProfilePage
+      const response = await authService.getProfile();
+      console.log('Sidebar: Profile response from backend:', response);
       
-      // Set profile picture dari localStorage jika ada
-      if (localUserData && localUserData.profile_photo) {
-        // Buat URL lengkap untuk foto profil
-        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${localUserData.profile_photo}?t=${Date.now()}`;
-        console.log('Sidebar: Setting profile picture URL:', photoUrl);
+      // Periksa struktur data yang dikembalikan oleh backend
+      const userData = response.data || response;
+      setUserData(userData);
+      
+      // Update localStorage dengan data terbaru
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Set profile picture dari backend
+      if (userData.profile_photo) {
+        const photoUrl = `https://api-iot.wibudev.moe/uploads/profile_pictures/${userData.profile_photo}?t=${Date.now()}`;
+        console.log('Sidebar: Setting profile picture URL from backend:', photoUrl);
         setProfilePicture(photoUrl);
       } else {
-        console.log('Sidebar: No profile_photo in localStorage');
+        console.log('Sidebar: No profile_photo from backend');
         setProfilePicture(null);
       }
     } catch (error) {
-      console.error('Sidebar: Error in fetchProfileData:', error);
+      console.error('Sidebar: Error fetching profile from backend:', error);
+      // Fallback ke localStorage jika backend error
+      const localUserData = getUserData();
+      setUserData(localUserData);
+      setProfilePicture(null);
     }
   };
   
